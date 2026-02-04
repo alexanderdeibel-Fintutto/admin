@@ -9,7 +9,10 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Products from "./pages/Products";
 import Bundles from "./pages/Bundles";
-import Offers from "./pages/Offers";
+import Analytics from "./pages/Analytics";
+import Errors from "./pages/Errors";
+import AICenter from "./pages/AICenter";
+import Support from "./pages/Support";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -29,7 +32,10 @@ const App = () => (
             <Route path="/users" element={<Users />} />
             <Route path="/products" element={<Products />} />
             <Route path="/bundles" element={<Bundles />} />
-            <Route path="/offers" element={<Offers />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/errors" element={<Errors />} />
+            <Route path="/ai-center" element={<AICenter />} />
+            <Route path="/support" element={<Support />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

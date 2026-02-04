@@ -4,11 +4,14 @@ import {
   Users, 
   Package, 
   Layers, 
-  Tag, 
   Settings,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  BarChart3,
+  AlertTriangle,
+  Bot,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,10 +20,13 @@ import { useTheme } from '@/hooks/useTheme';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Users, label: 'Benutzer', path: '/users' },
-  { icon: Package, label: 'Produkte', path: '/products' },
-  { icon: Layers, label: 'Bundles', path: '/bundles' },
-  { icon: Tag, label: 'Angebote', path: '/offers' },
+  { icon: Package, label: 'Produkte & Preise', path: '/products' },
+  { icon: Layers, label: 'Bundles & Angebote', path: '/bundles' },
+  { icon: Users, label: 'Benutzer & Abos', path: '/users' },
+  { icon: BarChart3, label: 'Analytics & Usage', path: '/analytics' },
+  { icon: AlertTriangle, label: 'Fehler & Logs', path: '/errors' },
+  { icon: Bot, label: 'KI-Center', path: '/ai-center' },
+  { icon: HelpCircle, label: 'Support & FAQ', path: '/support' },
   { icon: Settings, label: 'Einstellungen', path: '/settings' },
 ];
 
@@ -36,10 +42,10 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
           <span className="text-sm font-bold text-primary-foreground">F</span>
         </div>
-        <span className="text-lg font-semibold text-sidebar-foreground">Fintutto</span>
-        <span className="ml-auto rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-          Admin
-        </span>
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-sidebar-foreground">Fintutto</span>
+          <span className="text-[10px] text-muted-foreground">Command Center</span>
+        </div>
       </div>
 
       {/* Navigation */}
