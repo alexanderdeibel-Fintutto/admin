@@ -7,12 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, AlertCircle, Info, Search, Clock, Server, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { useErrorLogs, useResolveError, ErrorLog } from '@/hooks/useErrorLogs';
+import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 type ErrorSeverity = 'critical' | 'error' | 'warning' | 'info';
 type ErrorStatus = 'open' | 'in_progress' | 'resolved';
 
-interface ErrorLog {
+interface DisplayError {
   id: string;
   timestamp: string;
   app: string;
@@ -24,31 +29,28 @@ interface ErrorLog {
   userId?: string;
 }
 
-const mockErrors: ErrorLog[] = [
-  { id: '1', timestamp: '2024-01-15 14:32:21', app: 'Mietrechner Pro', severity: 'critical', message: 'Database connection timeout', status: 'open', count: 23, stackTrace: 'Error: ETIMEDOUT\n  at Connection._handleTimeoutError (/app/node_modules/mysql2/lib/connection.js:189:17)\n  at listOnTimeout (node:internal/timers:559:17)\n  at processTimers (node:internal/timers:502:7)', userId: 'user_123' },
-  { id: '2', timestamp: '2024-01-15 14:28:45', app: 'Finanzplaner', severity: 'error', message: 'Payment processing failed', status: 'in_progress', count: 5, stackTrace: 'StripeError: Your card was declined.\n  at _StripeError (/app/node_modules/stripe/lib/Error.js:42:17)' },
-  { id: '3', timestamp: '2024-01-15 14:15:33', app: 'Steuer-Assistent', severity: 'warning', message: 'Rate limit exceeded for API', status: 'open', count: 156 },
-  { id: '4', timestamp: '2024-01-15 13:58:12', app: 'Portfolio Manager', severity: 'error', message: 'Failed to fetch market data', status: 'resolved', count: 12 },
-  { id: '5', timestamp: '2024-01-15 13:45:00', app: 'Mietrechner Pro', severity: 'warning', message: 'Slow query detected (>5s)', status: 'open', count: 34 },
-  { id: '6', timestamp: '2024-01-15 13:22:18', app: 'Budget Tracker', severity: 'info', message: 'User session expired', status: 'resolved', count: 89 },
-  { id: '7', timestamp: '2024-01-15 12:55:41', app: 'Finanzplaner', severity: 'critical', message: 'Memory limit exceeded', status: 'in_progress', count: 3 },
-  { id: '8', timestamp: '2024-01-15 12:30:09', app: 'Steuer-Assistent', severity: 'error', message: 'Invalid tax calculation input', status: 'open', count: 8 },
-];
-
-const appStats = [
-  { app: 'Mietrechner Pro', errors: 57, critical: 23, warnings: 34 },
-  { app: 'Finanzplaner', errors: 8, critical: 3, warnings: 0 },
-  { app: 'Steuer-Assistent', errors: 164, critical: 0, warnings: 156 },
-  { app: 'Portfolio Manager', errors: 12, critical: 0, warnings: 0 },
-  { app: 'Budget Tracker', errors: 89, critical: 0, warnings: 0 },
-];
-
 export default function Errors() {
-  const [errors, setErrors] = useState<ErrorLog[]>(mockErrors);
+  const { data: rawErrors, isLoading } = useErrorLogs();
+  const resolveError = useResolveError();
+  const queryClient = useQueryClient();
+  
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedError, setSelectedError] = useState<ErrorLog | null>(null);
+  const [selectedError, setSelectedError] = useState<DisplayError | null>(null);
+
+  // Transform database errors to display format
+  const errors: DisplayError[] = (rawErrors || []).map(e => ({
+    id: e.id,
+    timestamp: e.occurred_at ? format(new Date(e.occurred_at), 'yyyy-MM-dd HH:mm:ss', { locale: de }) : '-',
+    app: e.app_id || 'System',
+    severity: (e.error_type as ErrorSeverity) || 'error',
+    message: e.error_message || 'Unbekannter Fehler',
+    status: e.resolved ? 'resolved' : 'open',
+    count: 1,
+    stackTrace: e.error_stack || undefined,
+    userId: e.user_id || undefined,
+  }));
 
   const filteredErrors = errors.filter(error => {
     const matchesSearch = error.message.toLowerCase().includes(search.toLowerCase()) || 
@@ -58,8 +60,21 @@ export default function Errors() {
     return matchesSearch && matchesSeverity && matchesStatus;
   });
 
-  const updateStatus = (id: string, status: ErrorStatus) => {
-    setErrors(errors.map(e => e.id === id ? { ...e, status } : e));
+  // Calculate app stats from real data
+  const appStats = Object.entries(
+    errors.reduce((acc, e) => {
+      if (!acc[e.app]) acc[e.app] = { app: e.app, errors: 0, critical: 0, warnings: 0 };
+      acc[e.app].errors++;
+      if (e.severity === 'critical') acc[e.app].critical++;
+      if (e.severity === 'warning') acc[e.app].warnings++;
+      return acc;
+    }, {} as Record<string, { app: string; errors: number; critical: number; warnings: number }>)
+  ).map(([_, v]) => v);
+
+  const updateStatus = async (id: string, status: ErrorStatus) => {
+    if (status === 'resolved') {
+      await resolveError.mutateAsync({ id });
+    }
   };
 
   const getSeverityIcon = (severity: ErrorSeverity) => {
@@ -102,7 +117,10 @@ export default function Errors() {
             <h1 className="text-3xl font-bold tracking-tight">Fehler & Logs</h1>
             <p className="text-muted-foreground">Überwachen und beheben Sie Systemfehler</p>
           </div>
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['error-logs'] })}
+          >
             <RefreshCw className="mr-2 h-4 w-4" />
             Aktualisieren
           </Button>

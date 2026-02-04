@@ -3,6 +3,7 @@ import { KPICard } from '@/components/dashboard/KPICard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Euro, 
   TrendingUp, 
@@ -18,8 +19,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -28,6 +27,9 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { useDashboardStats, useRecentActivity } from '@/hooks/useDashboardStats';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 const revenueData = [
   { month: 'Jan', revenue: 4200, mrr: 3800 },
@@ -44,23 +46,21 @@ const revenueData = [
   { month: 'Dez', revenue: 10200, mrr: 9200 },
 ];
 
-const recentActivity = [
-  { user: 'max.mueller@example.com', action: 'Upgrade auf Pro', time: 'vor 5 Min.', type: 'upgrade' },
-  { user: 'lisa.schmidt@example.com', action: 'Neues Abo (Basic)', time: 'vor 23 Min.', type: 'new' },
-  { user: 'peter.weber@example.com', action: 'Kündigung', time: 'vor 1 Std.', type: 'cancel' },
-  { user: 'anna.braun@example.com', action: 'Neues Abo (Free)', time: 'vor 2 Std.', type: 'new' },
-  { user: 'thomas.fischer@example.com', action: 'Upgrade auf Enterprise', time: 'vor 3 Std.', type: 'upgrade' },
-  { user: 'julia.wagner@example.com', action: 'Support-Ticket erstellt', time: 'vor 4 Std.', type: 'support' },
-];
-
-const activeSessions = [
-  { app: 'Mietrechner Pro', users: 47, trend: '+12%' },
-  { app: 'Finanzplaner', users: 32, trend: '+8%' },
-  { app: 'Steuer-Assistent', users: 28, trend: '-3%' },
-  { app: 'Portfolio Manager', users: 19, trend: '+5%' },
-];
-
 export default function Dashboard() {
+  const { data: stats, isLoading: statsLoading, refetch } = useDashboardStats();
+  const { data: recentActivity, isLoading: activityLoading } = useRecentActivity();
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+  };
+
+  const getActivityIcon = (action: string) => {
+    if (action.includes('upgrade') || action.includes('Upgrade')) return <ArrowUpRight className="h-4 w-4 text-primary" />;
+    if (action.includes('cancel') || action.includes('Kündigung')) return <ArrowDownRight className="h-4 w-4 text-destructive" />;
+    if (action.includes('support') || action.includes('ticket')) return <Send className="h-4 w-4 text-chart-4" />;
+    return <Users className="h-4 w-4 text-chart-2" />;
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -73,7 +73,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Aktualisieren
             </Button>
@@ -86,36 +86,53 @@ export default function Dashboard() {
 
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <KPICard
-            title="Gesamtumsatz"
-            value="€122.456"
-            change={{ value: '+12.5%', trend: 'up' }}
-            icon={Euro}
-          />
-          <KPICard
-            title="MRR"
-            value="€9.200"
-            change={{ value: '+8.2%', trend: 'up' }}
-            icon={TrendingUp}
-          />
-          <KPICard
-            title="ARR"
-            value="€110.400"
-            change={{ value: '+15.3%', trend: 'up' }}
-            icon={CreditCard}
-          />
-          <KPICard
-            title="Aktive Nutzer"
-            value="1.847"
-            change={{ value: '+4.3%', trend: 'up' }}
-            icon={Users}
-          />
-          <KPICard
-            title="Churn Rate"
-            value="2.1%"
-            change={{ value: '-0.4%', trend: 'up' }}
-            icon={UserMinus}
-          />
+          {statsLoading ? (
+            <>
+              {[...Array(5)].map((_, i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2">
+                    <Skeleton className="h-4 w-24" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-20" />
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          ) : (
+            <>
+              <KPICard
+                title="MRR"
+                value={formatCurrency(stats?.mrr || 0)}
+                change={{ value: '+8.2%', trend: 'up' }}
+                icon={TrendingUp}
+              />
+              <KPICard
+                title="ARR"
+                value={formatCurrency(stats?.arr || 0)}
+                change={{ value: '+15.3%', trend: 'up' }}
+                icon={CreditCard}
+              />
+              <KPICard
+                title="Aktive Nutzer"
+                value={String(stats?.totalUsers || 0)}
+                change={{ value: '+4.3%', trend: 'up' }}
+                icon={Users}
+              />
+              <KPICard
+                title="Aktive Abos"
+                value={String(stats?.activeSubscriptions || 0)}
+                change={{ value: '+12.5%', trend: 'up' }}
+                icon={Euro}
+              />
+              <KPICard
+                title="Churn Rate"
+                value={`${stats?.churnRate || 0}%`}
+                change={{ value: '-0.4%', trend: 'up' }}
+                icon={UserMinus}
+              />
+            </>
+          )}
         </div>
 
         {/* Charts Row */}
@@ -168,32 +185,34 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Aktive Sessions</CardTitle>
-                  <CardDescription>Live-Nutzer nach App</CardDescription>
+                  <CardTitle>System Status</CardTitle>
+                  <CardDescription>Aktuelle Systemauslastung</CardDescription>
                 </div>
                 <Activity className="h-5 w-5 text-chart-2 animate-pulse" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {activeSessions.map((session, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-chart-2 animate-pulse" />
-                      <span className="text-sm font-medium">{session.app}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold">{session.users}</span>
-                      <Badge variant={session.trend.startsWith('+') ? 'default' : 'secondary'} className="text-xs">
-                        {session.trend}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">API Gateway</span>
+                  <Badge variant="default">Online</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Datenbank</span>
+                  <Badge variant="default">Online</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Auth Service</span>
+                  <Badge variant="default">Online</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Stripe Webhook</span>
+                  <Badge variant="default">Aktiv</Badge>
+                </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Gesamt aktiv</span>
-                    <span className="font-bold">126 Nutzer</span>
+                    <span className="text-muted-foreground">Uptime</span>
+                    <span className="font-bold text-chart-2">99.9%</span>
                   </div>
                 </div>
               </div>
@@ -207,28 +226,41 @@ export default function Dashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Letzte Aktivitäten</CardTitle>
-              <CardDescription>Neueste Benutzeraktionen auf der Plattform</CardDescription>
+              <CardDescription>Neueste Admin-Logs auf der Plattform</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                        {activity.type === 'upgrade' && <ArrowUpRight className="h-4 w-4 text-primary" />}
-                        {activity.type === 'cancel' && <ArrowDownRight className="h-4 w-4 text-destructive" />}
-                        {activity.type === 'new' && <Users className="h-4 w-4 text-chart-2" />}
-                        {activity.type === 'support' && <Send className="h-4 w-4 text-chart-4" />}
+              {activityLoading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : recentActivity && recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivity.slice(0, 6).map((activity: any) => (
+                    <div key={activity.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                          {getActivityIcon(activity.action)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{activity.user_email || 'System'}</p>
+                          <p className="text-xs text-muted-foreground">{activity.action}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{activity.user}</p>
-                        <p className="text-xs text-muted-foreground">{activity.action}</p>
-                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {activity.created_at 
+                          ? format(new Date(activity.created_at), 'dd.MM. HH:mm', { locale: de })
+                          : '-'}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{activity.time}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Keine Aktivitäten vorhanden
+                </p>
+              )}
             </CardContent>
           </Card>
 

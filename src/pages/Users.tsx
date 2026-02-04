@@ -3,6 +3,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,102 +22,98 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { Pencil, MoreHorizontal, RefreshCw, Mail } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUsersWithSubscriptions, useUpdateProfile, Profile } from '@/hooks/useUsers';
+import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
-type UserStatus = 'active' | 'inactive' | 'pending';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  status: UserStatus;
-  subscription: string;
-  createdAt: string;
-}
-
-const mockUsers: User[] = [
-  { id: '1', email: 'max.mueller@example.com', name: 'Max Müller', role: 'Admin', status: 'active', subscription: 'Pro', createdAt: '2024-01-15' },
-  { id: '2', email: 'lisa.schmidt@example.com', name: 'Lisa Schmidt', role: 'Benutzer', status: 'active', subscription: 'Basic', createdAt: '2024-02-20' },
-  { id: '3', email: 'peter.weber@example.com', name: 'Peter Weber', role: 'Benutzer', status: 'inactive', subscription: 'Free', createdAt: '2024-03-10' },
-  { id: '4', email: 'anna.braun@example.com', name: 'Anna Braun', role: 'Benutzer', status: 'active', subscription: 'Enterprise', createdAt: '2024-01-05' },
-  { id: '5', email: 'thomas.fischer@example.com', name: 'Thomas Fischer', role: 'Moderator', status: 'pending', subscription: 'Pro', createdAt: '2024-04-01' },
-  { id: '6', email: 'julia.wagner@example.com', name: 'Julia Wagner', role: 'Benutzer', status: 'active', subscription: 'Basic', createdAt: '2024-02-28' },
-  { id: '7', email: 'stefan.koch@example.com', name: 'Stefan Koch', role: 'Benutzer', status: 'active', subscription: 'Free', createdAt: '2024-03-15' },
-  { id: '8', email: 'maria.bauer@example.com', name: 'Maria Bauer', role: 'Benutzer', status: 'inactive', subscription: 'Basic', createdAt: '2024-01-22' },
-];
-
-interface FormData {
-  email: string;
-  name: string;
-  role: string;
-  status: UserStatus;
+interface UserWithSub extends Profile {
+  subscription: any;
+  subscriptionTier: string;
+  subscriptionStatus: string;
 }
 
 export default function Users() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const { data: users, isLoading } = useUsersWithSubscriptions();
+  const updateProfile = useUpdateProfile();
+  const queryClient = useQueryClient();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<FormData>({ email: '', name: '', role: 'Benutzer', status: 'active' });
+  const [editingUser, setEditingUser] = useState<UserWithSub | null>(null);
+  const [formData, setFormData] = useState({ full_name: '', role: '', status: '' });
 
-  const handleSave = () => {
-    if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
-    } else {
-      const newUser: User = {
-        id: String(Date.now()),
-        ...formData,
-        subscription: 'Free',
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setUsers([...users, newUser]);
-    }
-    setIsDialogOpen(false);
-    setEditingUser(null);
-    setFormData({ email: '', name: '', role: 'Benutzer', status: 'active' });
-  };
-
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserWithSub) => {
     setEditingUser(user);
-    setFormData({ email: user.email, name: user.name, role: user.role, status: user.status });
+    setFormData({
+      full_name: user.full_name || '',
+      role: user.role || 'user',
+      status: user.status || 'active',
+    });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setUsers(users.filter(u => u.id !== id));
+  const handleSave = async () => {
+    if (!editingUser) return;
+    
+    await updateProfile.mutateAsync({
+      id: editingUser.id,
+      full_name: formData.full_name,
+      role: formData.role,
+      status: formData.status,
+    });
+    
+    setIsDialogOpen(false);
+    setEditingUser(null);
   };
 
   const columns = [
-    { key: 'name', header: 'Name' },
-    { key: 'email', header: 'E-Mail' },
-    { key: 'role', header: 'Rolle' },
+    { key: 'full_name', header: 'Name', render: (user: UserWithSub) => (
+      <span className="font-medium">{user.full_name || '-'}</span>
+    )},
+    { key: 'email', header: 'E-Mail', render: (user: UserWithSub) => (
+      <span className="text-muted-foreground">{user.email}</span>
+    )},
+    { key: 'role', header: 'Rolle', render: (user: UserWithSub) => (
+      <Badge variant="outline">{user.role || 'user'}</Badge>
+    )},
     {
       key: 'status',
       header: 'Status',
-      render: (user: User) => (
-        <Badge variant={user.status === 'active' ? 'default' : user.status === 'inactive' ? 'secondary' : 'outline'}>
-          {user.status === 'active' ? 'Aktiv' : user.status === 'inactive' ? 'Inaktiv' : 'Ausstehend'}
+      render: (user: UserWithSub) => (
+        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+          {user.status === 'active' ? 'Aktiv' : user.status || 'Unbekannt'}
         </Badge>
       ),
     },
     {
       key: 'subscription',
       header: 'Abonnement',
-      render: (user: User) => (
-        <Badge variant="outline">{user.subscription}</Badge>
+      render: (user: UserWithSub) => (
+        <Badge variant={user.subscriptionStatus === 'active' ? 'default' : 'outline'}>
+          {user.subscriptionTier}
+        </Badge>
       ),
     },
-    { key: 'createdAt', header: 'Erstellt am' },
+    { 
+      key: 'created_at', 
+      header: 'Erstellt', 
+      render: (user: UserWithSub) => (
+        <span className="text-sm text-muted-foreground">
+          {user.created_at ? format(new Date(user.created_at), 'dd.MM.yyyy', { locale: de }) : '-'}
+        </span>
+      )
+    },
     {
       key: 'actions',
       header: '',
-      render: (user: User) => (
+      render: (user: UserWithSub) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -128,9 +125,9 @@ export default function Users() {
               <Pencil className="mr-2 h-4 w-4" />
               Bearbeiten
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDelete(user.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Löschen
+            <DropdownMenuItem onClick={() => window.location.href = `mailto:${user.email}`}>
+              <Mail className="mr-2 h-4 w-4" />
+              E-Mail senden
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -143,88 +140,99 @@ export default function Users() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Benutzer</h1>
-            <p className="text-muted-foreground">Verwalten Sie alle Benutzer der Plattform</p>
+            <h1 className="text-3xl font-bold tracking-tight">Benutzer & Abos</h1>
+            <p className="text-muted-foreground">
+              Verwalten Sie alle Benutzer und deren Abonnements
+            </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setEditingUser(null);
-              setFormData({ email: '', name: '', role: 'Benutzer', status: 'active' });
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Benutzer hinzufügen
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingUser ? 'Benutzer bearbeiten' : 'Neuer Benutzer'}</DialogTitle>
-                <DialogDescription>
-                  {editingUser ? 'Bearbeiten Sie die Benutzerinformationen.' : 'Fügen Sie einen neuen Benutzer hinzu.'}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">E-Mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="role">Rolle</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Moderator">Moderator</SelectItem>
-                      <SelectItem value="Benutzer">Benutzer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as UserStatus })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Aktiv</SelectItem>
-                      <SelectItem value="inactive">Inaktiv</SelectItem>
-                      <SelectItem value="pending">Ausstehend</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Abbrechen</Button>
-                <Button onClick={handleSave}>Speichern</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            variant="outline"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['profiles'] })}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Aktualisieren
+          </Button>
         </div>
 
-        <DataTable<User>
-          data={users}
-          columns={columns}
-          searchKey="email"
-          searchPlaceholder="Nach E-Mail suchen..."
-        />
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : users && users.length > 0 ? (
+          <DataTable<UserWithSub>
+            data={users}
+            columns={columns}
+            searchKey="email"
+            searchPlaceholder="Nach E-Mail suchen..."
+          />
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">
+                Keine Benutzer gefunden.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Benutzer bearbeiten</DialogTitle>
+              <DialogDescription>
+                Bearbeiten Sie die Benutzerinformationen.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="role">Rolle</Label>
+                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="moderator">Moderator</SelectItem>
+                    <SelectItem value="user">Benutzer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Aktiv</SelectItem>
+                    <SelectItem value="inactive">Inaktiv</SelectItem>
+                    <SelectItem value="suspended">Gesperrt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Abbrechen</Button>
+              <Button onClick={handleSave} disabled={updateProfile.isPending}>
+                {updateProfile.isPending ? 'Speichern...' : 'Speichern'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
