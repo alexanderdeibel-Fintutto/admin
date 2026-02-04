@@ -5,50 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Bell, Palette, Save, Mail, Webhook, Key, Users, Plus, Pencil, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
-
-const mockTeam = [
-  { id: '1', name: 'Max Müller', email: 'max@fintutto.de', role: 'owner', status: 'active' },
-  { id: '2', name: 'Lisa Schmidt', email: 'lisa@fintutto.de', role: 'admin', status: 'active' },
-  { id: '3', name: 'Peter Weber', email: 'peter@fintutto.de', role: 'editor', status: 'active' },
-];
-
-const mockAPIKeys = [
-  { id: '1', name: 'Production API', key: 'fnt_prod_xxxxxxxxxxxx', created: '01.01.2024', lastUsed: 'vor 5 Min.', permissions: ['read', 'write'] },
-  { id: '2', name: 'Development', key: 'fnt_dev_xxxxxxxxxxxx', created: '15.01.2024', lastUsed: 'vor 2 Std.', permissions: ['read'] },
-];
-
-const mockWebhooks = [
-  { id: '1', url: 'https://api.example.com/webhooks', events: ['user.created'], active: true, lastTriggered: 'vor 1 Std.' },
-];
-
-const emailTemplates = [
-  { id: 'welcome', name: 'Willkommens-E-Mail', subject: 'Willkommen bei Fintutto!', active: true },
-  { id: 'password_reset', name: 'Passwort zurücksetzen', subject: 'Ihr Passwort zurücksetzen', active: true },
-  { id: 'invoice', name: 'Rechnung', subject: 'Ihre Rechnung', active: true },
-];
+import { Building2, Palette, Save, Mail, Webhook, Key, Users, Plus } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
-  const [showKey, setShowKey] = useState<string | null>(null);
 
   const handleSave = () => {
     toast({ title: 'Einstellungen gespeichert', description: 'Ihre Änderungen wurden übernommen.' });
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: 'Kopiert!' });
   };
 
   return (
@@ -74,7 +43,7 @@ export default function Settings() {
                 <div className="flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /><CardTitle>Unternehmensdaten</CardTitle></div>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Firmenname</Label><Input defaultValue="Fintutto GmbH" /></div>
+                <div className="space-y-2"><Label>Firmenname</Label><Input placeholder="Ihr Firmenname" /></div>
                 <div className="space-y-2"><Label>E-Mail</Label><Input defaultValue={user?.email || ''} /></div>
               </CardContent>
             </Card>
@@ -92,14 +61,17 @@ export default function Settings() {
 
           <TabsContent value="email">
             <Card>
-              <CardHeader><div className="flex items-center gap-2"><Mail className="h-5 w-5 text-primary" /><CardTitle>E-Mail Templates (Brevo)</CardTitle></div></CardHeader>
-              <CardContent className="space-y-4">
-                {emailTemplates.map(t => (
-                  <div key={t.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div><p className="font-medium">{t.name}</p><p className="text-sm text-muted-foreground">{t.subject}</p></div>
-                    <div className="flex gap-2"><Button variant="outline" size="sm"><Pencil className="h-4 w-4" /></Button><Switch checked={t.active} /></div>
-                  </div>
-                ))}
+              <CardHeader><div className="flex items-center gap-2"><Mail className="h-5 w-5 text-primary" /><CardTitle>E-Mail Templates</CardTitle></div></CardHeader>
+              <CardContent className="p-12 text-center">
+                <Mail className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Keine E-Mail Templates</h3>
+                <p className="text-muted-foreground mb-4">
+                  E-Mail Templates werden angezeigt, sobald ein E-Mail-Dienst (z.B. Brevo) konfiguriert ist.
+                </p>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Template erstellen
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -107,14 +79,16 @@ export default function Settings() {
           <TabsContent value="webhooks">
             <Card>
               <CardHeader><div className="flex items-center gap-2"><Webhook className="h-5 w-5 text-primary" /><CardTitle>Webhooks</CardTitle></div></CardHeader>
-              <CardContent className="space-y-4">
-                {mockWebhooks.map(w => (
-                  <div key={w.id} className="p-4 border rounded-lg">
-                    <code className="text-sm">{w.url}</code>
-                    <div className="flex gap-2 mt-2">{w.events.map(e => <Badge key={e} variant="outline">{e}</Badge>)}</div>
-                  </div>
-                ))}
-                <Button variant="outline"><Plus className="mr-2 h-4 w-4" />Neuer Webhook</Button>
+              <CardContent className="p-12 text-center">
+                <Webhook className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Keine Webhooks</h3>
+                <p className="text-muted-foreground mb-4">
+                  Webhooks ermöglichen es, externe Systeme über Ereignisse zu benachrichtigen.
+                </p>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Neuer Webhook
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -122,18 +96,16 @@ export default function Settings() {
           <TabsContent value="api">
             <Card>
               <CardHeader><div className="flex items-center gap-2"><Key className="h-5 w-5 text-primary" /><CardTitle>API-Keys</CardTitle></div></CardHeader>
-              <CardContent className="space-y-4">
-                {mockAPIKeys.map(k => (
-                  <div key={k.id} className="p-4 border rounded-lg">
-                    <p className="font-medium">{k.name}</p>
-                    <div className="flex items-center gap-2 mt-2 bg-muted p-2 rounded">
-                      <code className="flex-1 text-sm">{showKey === k.id ? k.key : '••••••••••••'}</code>
-                      <Button variant="ghost" size="icon" onClick={() => setShowKey(showKey === k.id ? null : k.id)}>{showKey === k.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
-                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(k.key)}><Copy className="h-4 w-4" /></Button>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline"><Plus className="mr-2 h-4 w-4" />Neuer API-Key</Button>
+              <CardContent className="p-12 text-center">
+                <Key className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Keine API-Keys</h3>
+                <p className="text-muted-foreground mb-4">
+                  API-Keys ermöglichen den programmatischen Zugriff auf Ihre Daten.
+                </p>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Neuer API-Key
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -141,17 +113,16 @@ export default function Settings() {
           <TabsContent value="team">
             <Card>
               <CardHeader><div className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /><CardTitle>Team & Rollen</CardTitle></div></CardHeader>
-              <CardContent className="space-y-4">
-                {mockTeam.map(m => (
-                  <div key={m.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-medium text-primary">{m.name.split(' ').map(n => n[0]).join('')}</div>
-                      <div><p className="font-medium">{m.name}</p><p className="text-sm text-muted-foreground">{m.email}</p></div>
-                    </div>
-                    <Badge variant={m.role === 'owner' ? 'default' : 'outline'}>{m.role}</Badge>
-                  </div>
-                ))}
-                <Button variant="outline"><Plus className="mr-2 h-4 w-4" />Mitglied einladen</Button>
+              <CardContent className="p-12 text-center">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Keine Team-Mitglieder</h3>
+                <p className="text-muted-foreground mb-4">
+                  Laden Sie Team-Mitglieder ein, um gemeinsam an der Plattform zu arbeiten.
+                </p>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Mitglied einladen
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
