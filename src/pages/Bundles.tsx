@@ -44,11 +44,8 @@ const availableProducts = [
   { id: 'storage', name: 'Extra Storage', price: 4.99 },
 ];
 
-const mockBundles: Bundle[] = [
-  { id: '1', name: 'Starter Bundle', description: 'Perfekt für kleine Teams', products: ['basic', 'storage'], originalPrice: 14.98, bundlePrice: 11.99, discount: 20, status: 'active' },
-  { id: '2', name: 'Business Bundle', description: 'Für wachsende Unternehmen', products: ['pro', 'api_addon', 'analytics'], originalPrice: 64.97, bundlePrice: 49.99, discount: 23, status: 'active' },
-  { id: '3', name: 'Enterprise Complete', description: 'Alles inklusive für Großkunden', products: ['enterprise', 'api_addon', 'analytics', 'storage'], originalPrice: 139.96, bundlePrice: 99.99, discount: 29, status: 'active' },
-];
+// Bundles werden lokal verwaltet - später mit Supabase synchronisieren
+const initialBundles: Bundle[] = [];
 
 interface FormData {
   name: string;
@@ -59,7 +56,7 @@ interface FormData {
 }
 
 export default function Bundles() {
-  const [bundles, setBundles] = useState<Bundle[]>(mockBundles);
+  const [bundles, setBundles] = useState<Bundle[]>(initialBundles);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<Bundle | null>(null);
   const [formData, setFormData] = useState<FormData>({
