@@ -11,7 +11,8 @@ import {
   BarChart3,
   AlertTriangle,
   Bot,
-  HelpCircle
+  HelpCircle,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +27,7 @@ const navItems = [
   { icon: BarChart3, label: 'Analytics & Usage', path: '/analytics' },
   { icon: AlertTriangle, label: 'Fehler & Logs', path: '/errors' },
   { icon: Bot, label: 'KI-Center', path: '/ai-center' },
+  { icon: Globe, label: 'URL Check', path: '/url-check' },
   { icon: HelpCircle, label: 'Support & FAQ', path: '/support' },
   { icon: Settings, label: 'Einstellungen', path: '/settings' },
 ];

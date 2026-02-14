@@ -14,6 +14,7 @@ import Errors from "./pages/Errors";
 import AICenter from "./pages/AICenter";
 import Support from "./pages/Support";
 import Settings from "./pages/Settings";
+import UrlCheck from "./pages/UrlCheck";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/ai-center" element={<AICenter />} />
             <Route path="/support" element={<Support />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/url-check" element={<UrlCheck />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
