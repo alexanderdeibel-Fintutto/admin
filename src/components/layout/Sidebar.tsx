@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Package, 
-  Layers, 
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Layers,
   Settings,
   LogOut,
   Moon,
@@ -11,7 +11,8 @@ import {
   BarChart3,
   AlertTriangle,
   Bot,
-  HelpCircle
+  HelpCircle,
+  AppWindow
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +26,7 @@ const navItems = [
   { icon: Users, label: 'Benutzer & Abos', path: '/users' },
   { icon: BarChart3, label: 'Analytics & Usage', path: '/analytics' },
   { icon: AlertTriangle, label: 'Fehler & Logs', path: '/errors' },
+  { icon: AppWindow, label: 'Apps-Verwaltung', path: '/apps' },
   { icon: Bot, label: 'KI-Center', path: '/ai-center' },
   { icon: HelpCircle, label: 'Support & FAQ', path: '/support' },
   { icon: Settings, label: 'Einstellungen', path: '/settings' },

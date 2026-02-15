@@ -14,6 +14,8 @@ import Errors from "./pages/Errors";
 import AICenter from "./pages/AICenter";
 import Support from "./pages/Support";
 import Settings from "./pages/Settings";
+import Apps from "./pages/Apps";
+import AppDetail from "./pages/AppDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/errors" element={<Errors />} />
             <Route path="/ai-center" element={<AICenter />} />
             <Route path="/support" element={<Support />} />
+            <Route path="/apps" element={<Apps />} />
+            <Route path="/apps/:appId" element={<AppDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
