@@ -10,6 +10,7 @@ import {
   Handshake, Search, MousePointerClick, UserPlus, CreditCard,
   TrendingUp, ExternalLink, DollarSign, Users, Eye
 } from 'lucide-react';
+import { CSVExport } from '@/components/ui/csv-export';
 import {
   usePartners, useAffiliatePerformance, useAffiliateTracking,
   usePartnerCommissions, usePartnerPayouts, usePartnerStats
@@ -44,6 +45,9 @@ export default function Partners() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Partner & Affiliate</h1>
             <p className="text-muted-foreground">Partner-Netzwerk, Affiliate-Tracking und Provisionen verwalten</p>
+          </div>
+          <div className="flex gap-2">
+            <CSVExport data={(partners || []) as Record<string, unknown>[]} filename="partners" label="Partner CSV" />
           </div>
         </div>
 

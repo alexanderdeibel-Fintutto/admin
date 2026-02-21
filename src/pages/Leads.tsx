@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Target, Search, UserPlus, TrendingUp, Star, Filter } from 'lucide-react';
+import { CSVExport } from '@/components/ui/csv-export';
 import { useLeads, useLeadStats } from '@/hooks/useLeads';
 
 const statusColors: Record<string, string> = {
@@ -35,9 +36,12 @@ export default function Leads() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Lead Management</h1>
-          <p className="text-muted-foreground">Leads aus allen Apps verwalten, bewerten und konvertieren</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Lead Management</h1>
+            <p className="text-muted-foreground">Leads aus allen Apps verwalten, bewerten und konvertieren</p>
+          </div>
+          <CSVExport data={(leads || []) as Record<string, unknown>[]} filename="leads" label="Leads CSV" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

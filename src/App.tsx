@@ -4,6 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { CommandPalette } from "./components/ui/command-palette";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
@@ -34,6 +37,10 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const P = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>{children}</ProtectedRoute>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -41,36 +48,39 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/bundles" element={<Bundles />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/errors" element={<Errors />} />
-            <Route path="/ai-center" element={<AICenter />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/url-check" element={<UrlCheck />} />
-            <Route path="/partners" element={<Partners />} />
-            <Route path="/leads" element={<Leads />} />
-            <Route path="/app-registry" element={<AppRegistry />} />
-            <Route path="/organizations" element={<Organizations />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/ai-config" element={<AIConfig />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/tools" element={<Tools />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/properties" element={<Properties />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/roles-security" element={<RolesSecurity />} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/devops" element={<DevOps />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <CommandPalette />
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={<P><Dashboard /></P>} />
+              <Route path="/users" element={<P><Users /></P>} />
+              <Route path="/products" element={<P><Products /></P>} />
+              <Route path="/bundles" element={<P><Bundles /></P>} />
+              <Route path="/analytics" element={<P><Analytics /></P>} />
+              <Route path="/errors" element={<P><Errors /></P>} />
+              <Route path="/ai-center" element={<P><AICenter /></P>} />
+              <Route path="/support" element={<P><Support /></P>} />
+              <Route path="/settings" element={<P><Settings /></P>} />
+              <Route path="/url-check" element={<P><UrlCheck /></P>} />
+              <Route path="/partners" element={<P><Partners /></P>} />
+              <Route path="/leads" element={<P><Leads /></P>} />
+              <Route path="/app-registry" element={<P><AppRegistry /></P>} />
+              <Route path="/organizations" element={<P><Organizations /></P>} />
+              <Route path="/subscriptions" element={<P><Subscriptions /></P>} />
+              <Route path="/ai-config" element={<P><AIConfig /></P>} />
+              <Route path="/services" element={<P><Services /></P>} />
+              <Route path="/tools" element={<P><Tools /></P>} />
+              <Route path="/documents" element={<P><Documents /></P>} />
+              <Route path="/properties" element={<P><Properties /></P>} />
+              <Route path="/notifications" element={<P><Notifications /></P>} />
+              <Route path="/roles-security" element={<P><RolesSecurity /></P>} />
+              <Route path="/finance" element={<P><Finance /></P>} />
+              <Route path="/community" element={<P><Community /></P>} />
+              <Route path="/devops" element={<P><DevOps /></P>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

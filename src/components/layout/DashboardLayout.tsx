@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useRealtimeSubscriptions } from '@/hooks/useRealtimeSubscription';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, loading } = useAuth();
+  useRealtimeSubscriptions();
 
   if (loading) {
     return (
