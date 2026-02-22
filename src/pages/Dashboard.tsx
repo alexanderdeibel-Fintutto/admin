@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { useDashboardStats, useRecentActivity } from '@/hooks/useDashboardStats';
 import { useAdminDashboard } from '@/hooks/useAnalytics';
+import { useAdminStats, useAdminAccessCheck } from '@/hooks/useAdminAuth';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -55,8 +56,13 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading, refetch } = useDashboardStats();
   const { data: recentActivity, isLoading: activityLoading } = useRecentActivity();
   const { data: dashboard } = useAdminDashboard();
+  const { data: adminStats } = useAdminStats();
+  const { data: adminAccess } = useAdminAccessCheck();
   const { data: revenueData, isLoading: revenueLoading } = useRevenueChart();
   const navigate = useNavigate();
+
+  // Use RPC-based admin stats as primary source, fallback to view-based dashboard
+  const d = adminStats || dashboard;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
@@ -97,11 +103,11 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <KPICard title="MRR" value={formatCurrency(stats?.mrr || 0)} change={{ value: `${dashboard?.paid_subscriptions || 0} paid`, trend: 'up' }} icon={TrendingUp} />
-              <KPICard title="ARR" value={formatCurrency(stats?.arr || 0)} change={{ value: `${dashboard?.active_subscriptions || 0} aktiv`, trend: 'up' }} icon={CreditCard} />
-              <KPICard title="Aktive Nutzer" value={String(stats?.totalUsers || 0)} change={{ value: `+${dashboard?.new_users_7d || 0} (7d)`, trend: 'up' }} icon={Users} />
-              <KPICard title="Aktive Abos" value={String(stats?.activeSubscriptions || 0)} change={{ value: `${dashboard?.active_apps || 0} Apps`, trend: 'up' }} icon={Euro} />
-              <KPICard title="Churn Rate" value={`${stats?.churnRate || 0}%`} change={{ value: `${dashboard?.errors_today || 0} Fehler`, trend: (stats?.churnRate || 0) > 5 ? 'down' : 'up' }} icon={UserMinus} />
+              <KPICard title="MRR" value={formatCurrency(adminStats ? (adminStats.mrr_cents / 100) : (stats?.mrr || 0))} change={{ value: `${d?.paid_subscriptions || 0} paid`, trend: 'up' }} icon={TrendingUp} />
+              <KPICard title="ARR" value={formatCurrency(adminStats ? (adminStats.mrr_cents / 100 * 12) : (stats?.arr || 0))} change={{ value: `${d?.active_subscriptions || 0} aktiv`, trend: 'up' }} icon={CreditCard} />
+              <KPICard title="Aktive Nutzer" value={String(d?.total_users || stats?.totalUsers || 0)} change={{ value: `+${d?.new_users_7d || 0} (7d)`, trend: 'up' }} icon={Users} />
+              <KPICard title="Aktive Abos" value={String(d?.active_subscriptions || stats?.activeSubscriptions || 0)} change={{ value: `${d?.active_apps || 0} Apps`, trend: 'up' }} icon={Euro} />
+              <KPICard title="Churn Rate" value={`${stats?.churnRate || 0}%`} change={{ value: `${d?.errors_today || 0} Fehler`, trend: (stats?.churnRate || 0) > 5 ? 'down' : 'up' }} icon={UserMinus} />
             </>
           )}
         </div>
@@ -141,43 +147,48 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>System Status</CardTitle>
-                  <CardDescription>Live aus v_admin_dashboard</CardDescription>
+                  <CardDescription>{adminAccess?.is_admin ? 'Admin-Zugriff aktiv' : 'Daten via RPC'}</CardDescription>
                 </div>
                 <Activity className="h-5 w-5 text-chart-2 animate-pulse" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {adminAccess && !adminAccess.is_admin && (
+                  <div className="p-2 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs">
+                    Admin-Rolle nicht erkannt. Bitte SQL-Migration ausfuhren.
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Aktive Apps</span>
-                  <Badge variant="default">{dashboard?.active_apps || 0}</Badge>
+                  <Badge variant="default">{d?.active_apps || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Fehler heute</span>
                   <Badge className={
-                    (dashboard?.errors_today || 0) > 0
+                    (d?.errors_today || 0) > 0
                       ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
                       : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                   }>
-                    {dashboard?.errors_today || 0}
+                    {d?.errors_today || 0}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Ungeloste Fehler</span>
-                  <Badge variant="outline">{dashboard?.unresolved_errors || 0}</Badge>
+                  <Badge variant="outline">{d?.unresolved_errors || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Webhooks heute</span>
-                  <Badge variant="outline">{dashboard?.webhooks_today || 0}</Badge>
+                  <Badge variant="outline">{d?.webhooks_today || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Neue Nutzer heute</span>
-                  <Badge variant="outline">{dashboard?.new_users_today || 0}</Badge>
+                  <Badge variant="outline">{d?.new_users_today || 0}</Badge>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Organisationen</span>
-                    <span className="font-bold">{dashboard?.total_organizations || 0}</span>
+                    <span className="font-bold">{d?.total_organizations || 0}</span>
                   </div>
                 </div>
               </div>

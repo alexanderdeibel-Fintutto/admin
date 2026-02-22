@@ -11,7 +11,10 @@ export function useAIUsageDaily() {
         .select('*')
         .order('date', { ascending: false })
         .limit(90);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Analytics] v_ai_usage_daily_by_app:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -26,7 +29,10 @@ export function useAIUsageDailyByUser() {
         .select('*')
         .order('date', { ascending: false })
         .limit(100);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Analytics] v_ai_usage_daily_by_user:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -40,7 +46,10 @@ export function useAITopFeatures() {
         .from('v_ai_top_features')
         .select('*')
         .limit(20);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Analytics] v_ai_top_features:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -55,7 +64,10 @@ export function useServiceUsageDaily() {
         .select('*')
         .order('usage_date', { ascending: false })
         .limit(90);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Analytics] service_usage_daily:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -69,7 +81,10 @@ export function useAdminDashboard() {
         .from('v_admin_dashboard')
         .select('*')
         .single();
-      if (error) throw error;
+      if (error) {
+        console.warn('[Analytics] v_admin_dashboard:', error.message);
+        return null;
+      }
       return data;
     },
   });

@@ -34,7 +34,10 @@ export function useServiceRequests() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(200);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Support] service_requests:', error.message);
+        return [] as ServiceRequest[];
+      }
       return (data || []) as ServiceRequest[];
     },
   });

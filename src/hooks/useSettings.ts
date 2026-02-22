@@ -42,7 +42,10 @@ export function useApiKeys() {
         .from('api_keys')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.warn('[Settings] api_keys:', error.message);
+        return [] as ApiKey[];
+      }
       return (data || []) as ApiKey[];
     },
   });
@@ -57,7 +60,10 @@ export function useWebhookLogs() {
         .select('*')
         .order('received_at', { ascending: false })
         .limit(100);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Settings] webhook_logs:', error.message);
+        return [] as WebhookLog[];
+      }
       return (data || []) as WebhookLog[];
     },
   });
@@ -72,7 +78,10 @@ export function useTeamMembers() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
-      if (error) throw error;
+      if (error) {
+        console.warn('[Settings] profiles (team):', error.message);
+        return [];
+      }
       return data || [];
     },
   });

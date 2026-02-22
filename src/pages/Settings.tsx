@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Palette, Save, Webhook, Key, Users } from 'lucide-react';
+import { Building2, Palette, Save, Webhook, Key, Users, ShieldCheck, Database, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useApiKeys, useWebhookLogs, useTeamMembers, useUpdateApiKey } from '@/hooks/useSettings';
+import { useAdminAccessCheck, useAdminStats } from '@/hooks/useAdminAuth';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -21,6 +22,8 @@ export default function Settings() {
   const { data: webhookLogs, isLoading: webhooksLoading } = useWebhookLogs();
   const { data: team, isLoading: teamLoading } = useTeamMembers();
   const updateKey = useUpdateApiKey();
+  const { data: adminAccess, isLoading: accessLoading } = useAdminAccessCheck();
+  const { data: adminStats, isLoading: statsLoading } = useAdminStats();
 
   const handleSave = () => {
     toast({ title: 'Einstellungen gespeichert', description: 'Ihre Anderungen wurden ubernommen.' });
@@ -40,6 +43,7 @@ export default function Settings() {
             <TabsTrigger value="api">API-Keys ({apiKeys?.length || 0})</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks ({webhookLogs?.length || 0})</TabsTrigger>
             <TabsTrigger value="team">Team ({team?.length || 0})</TabsTrigger>
+            <TabsTrigger value="diagnose">Diagnose</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
@@ -190,6 +194,92 @@ export default function Settings() {
                 </tbody>
               </table>
             </div>
+          </TabsContent>
+
+          <TabsContent value="diagnose" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  <CardTitle>Admin-Zugriff Diagnose</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {accessLoading ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : adminAccess ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {adminAccess.authenticated ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-red-500" />}
+                      <span className="text-sm">Authentifiziert: <strong>{adminAccess.authenticated ? 'Ja' : 'Nein'}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {adminAccess.is_admin ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                      <span className="text-sm">Admin-Rolle: <strong>{adminAccess.is_admin ? 'Ja' : 'Nein'}</strong></span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <div>E-Mail: {adminAccess.email || '-'}</div>
+                      <div>User-ID: <code className="text-xs">{adminAccess.user_id || '-'}</code></div>
+                      <div>Rolle: {adminAccess.role_name}</div>
+                    </div>
+                    {!adminAccess.is_admin && (
+                      <div className="p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm">
+                        <strong>Admin-Rolle fehlt!</strong> Bitte die SQL-Migration in der Supabase Dashboard SQL-Editor ausfuhren.
+                        Datei: <code>supabase/migrations/20260222_admin_rls_complete.sql</code>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 text-sm">
+                    <strong>RPC-Funktion nicht verfugbar.</strong> Die Funktion <code>check_admin_access()</code> existiert noch nicht.
+                    Bitte die SQL-Migration ausfuhren.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-primary" />
+                  <CardTitle>Daten-Zugriff Status</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {statsLoading ? (
+                  <Skeleton className="h-40 w-full" />
+                ) : adminStats ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      { label: 'Nutzer gesamt', value: adminStats.total_users },
+                      { label: 'Neue Nutzer (7d)', value: adminStats.new_users_7d },
+                      { label: 'Organisationen', value: adminStats.total_organizations },
+                      { label: 'Aktive Abos', value: adminStats.active_subscriptions },
+                      { label: 'Bezahlte Abos', value: adminStats.paid_subscriptions },
+                      { label: 'Aktive Apps', value: adminStats.active_apps },
+                      { label: 'Fehler heute', value: adminStats.errors_today },
+                      { label: 'AI Requests (7d)', value: adminStats.total_ai_requests_7d },
+                      { label: 'Leads', value: adminStats.total_leads },
+                      { label: 'Partners', value: adminStats.total_partners },
+                      { label: 'Offene Tickets', value: adminStats.open_service_requests },
+                      { label: 'MRR', value: `${(adminStats.mrr_cents / 100).toFixed(2)}` },
+                    ].map(item => (
+                      <div key={item.label} className="p-3 rounded border bg-muted/30">
+                        <div className="text-xs text-muted-foreground">{item.label}</div>
+                        <div className="text-lg font-bold">{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm">
+                    <strong>RPC <code>get_admin_stats()</code> nicht verfugbar.</strong>
+                    <p className="mt-1">Daten werden uber direkte Tabellenabfragen geladen. RLS-Policies konnten den Zugriff einschranken.</p>
+                    <p className="mt-2">Losung: Die SQL-Migration im Supabase SQL-Editor ausfuhren:</p>
+                    <code className="block mt-1 text-xs">supabase/migrations/20260222_admin_rls_complete.sql</code>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

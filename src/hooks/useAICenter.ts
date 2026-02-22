@@ -11,7 +11,10 @@ export function useAIUsageLogs() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(200);
-      if (error) throw error;
+      if (error) {
+        console.warn('[AICenter] ai_usage_logs:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -26,7 +29,10 @@ export function useAIConversations() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
-      if (error) throw error;
+      if (error) {
+        console.warn('[AICenter] ai_conversations:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -41,7 +47,10 @@ export function useAICostsSummary() {
         .select('*')
         .order('date', { ascending: false })
         .limit(30);
-      if (error) throw error;
+      if (error) {
+        console.warn('[AICenter] v_ai_costs_summary:', error.message);
+        return [];
+      }
       return data || [];
     },
   });
@@ -56,7 +65,10 @@ export function useAIUsageDailyByUser() {
         .select('*')
         .order('date', { ascending: false })
         .limit(100);
-      if (error) throw error;
+      if (error) {
+        console.warn('[AICenter] v_ai_usage_daily_by_user:', error.message);
+        return [];
+      }
       return data || [];
     },
   });

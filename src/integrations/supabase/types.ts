@@ -13137,6 +13137,14 @@ export type Database = {
       }
     }
     Functions: {
+      check_admin_access: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      get_admin_stats: {
+        Args: Record<string, never>
+        Returns: Json
+      }
       accept_invitation: {
         Args: { p_token: string; p_user_id: string }
         Returns: Json
