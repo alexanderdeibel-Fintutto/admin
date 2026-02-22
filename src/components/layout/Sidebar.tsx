@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Package, 
-  Layers, 
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Layers,
   Settings,
   LogOut,
   Moon,
@@ -12,24 +12,89 @@ import {
   AlertTriangle,
   Bot,
   HelpCircle,
-  Globe
+  Globe,
+  Handshake,
+  Target,
+  AppWindow,
+  Building2,
+  CreditCard,
+  Brain,
+  Server,
+  Wrench,
+  FileText,
+  Home,
+  Bell,
+  Shield,
+  Wallet,
+  MessageCircle,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Package, label: 'Produkte & Preise', path: '/products' },
-  { icon: Layers, label: 'Bundles & Angebote', path: '/bundles' },
-  { icon: Users, label: 'Benutzer & Abos', path: '/users' },
-  { icon: BarChart3, label: 'Analytics & Usage', path: '/analytics' },
-  { icon: AlertTriangle, label: 'Fehler & Logs', path: '/errors' },
-  { icon: Bot, label: 'KI-Center', path: '/ai-center' },
-  { icon: Globe, label: 'URL Check', path: '/url-check' },
-  { icon: HelpCircle, label: 'Support & FAQ', path: '/support' },
-  { icon: Settings, label: 'Einstellungen', path: '/settings' },
+const navSections = [
+  {
+    label: 'Ubersicht',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      { icon: BarChart3, label: 'Analytics & Usage', path: '/analytics' },
+      { icon: AlertTriangle, label: 'Fehler & Logs', path: '/errors' },
+    ],
+  },
+  {
+    label: 'Ecosystem',
+    items: [
+      { icon: AppWindow, label: 'App Registry', path: '/app-registry' },
+      { icon: Wrench, label: 'Tools Registry', path: '/tools' },
+      { icon: Server, label: 'Services & APIs', path: '/services' },
+      { icon: Globe, label: 'URL Check', path: '/url-check' },
+    ],
+  },
+  {
+    label: 'Kunden & Revenue',
+    items: [
+      { icon: Users, label: 'Benutzer & Abos', path: '/users' },
+      { icon: Building2, label: 'Organisationen', path: '/organizations' },
+      { icon: CreditCard, label: 'Subscriptions', path: '/subscriptions' },
+      { icon: Target, label: 'Lead Management', path: '/leads' },
+      { icon: Handshake, label: 'Partner & Affiliate', path: '/partners' },
+    ],
+  },
+  {
+    label: 'Produkte & Content',
+    items: [
+      { icon: Package, label: 'Produkte & Preise', path: '/products' },
+      { icon: Layers, label: 'Bundles & Angebote', path: '/bundles' },
+      { icon: FileText, label: 'Dokumente', path: '/documents' },
+      { icon: Home, label: 'Immobilien', path: '/properties' },
+    ],
+  },
+  {
+    label: 'KI & Konfiguration',
+    items: [
+      { icon: Brain, label: 'KI-Konfiguration', path: '/ai-config' },
+      { icon: Bot, label: 'KI-Center', path: '/ai-center' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { icon: Bell, label: 'Benachrichtigungen', path: '/notifications' },
+      { icon: Shield, label: 'Rollen & Sicherheit', path: '/roles-security' },
+      { icon: Wallet, label: 'Finanzen', path: '/finance' },
+      { icon: MessageCircle, label: 'Community', path: '/community' },
+      { icon: Activity, label: 'DevOps & Monitoring', path: '/devops' },
+    ],
+  },
+  {
+    label: '',
+    items: [
+      { icon: HelpCircle, label: 'Support & FAQ', path: '/support' },
+      { icon: Settings, label: 'Einstellungen', path: '/settings' },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -51,25 +116,36 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto px-3 py-2">
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className="mb-1">
+            {section.label && (
+              <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {section.label}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="h-3.5 w-3.5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}
@@ -87,7 +163,7 @@ export function Sidebar() {
             <p className="text-xs text-muted-foreground">Administrator</p>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <Button
             variant="ghost"
