@@ -17,11 +17,10 @@ BEGIN
     SELECT 1 FROM public.user_roles
     WHERE user_id = '49695d31-7673-4a3b-b5be-3aaaef120faf'
   ) THEN
-    -- Try to find the Administrator role ID
-    INSERT INTO public.user_roles (user_id, org_id, role_id, assigned_at)
+    -- Try to find the Administrator role ID and insert without org_id
+    INSERT INTO public.user_roles (user_id, role_id, assigned_at)
     SELECT
       '49695d31-7673-4a3b-b5be-3aaaef120faf',
-      '00000000-0000-0000-0000-000000000001',
       r.id,
       now()
     FROM public.roles r
@@ -229,7 +228,7 @@ DROP POLICY IF EXISTS "Admin can view all service requests" ON public.service_re
 CREATE POLICY "Admin can view all service requests"
 ON public.service_requests FOR SELECT TO authenticated
 USING (
-  tenant_id = auth.uid()
+  org_id IN (SELECT org_id FROM public.org_memberships WHERE user_id = auth.uid() AND status = 'active')
   OR public.has_role_by_name(auth.uid(), 'Administrator')
 );
 
@@ -292,7 +291,7 @@ USING (public.has_role_by_name(auth.uid(), 'Administrator'));
 DROP POLICY IF EXISTS "Admin can view all community posts" ON public.community_posts;
 CREATE POLICY "Admin can view all community posts"
 ON public.community_posts FOR SELECT TO authenticated
-USING (public.has_role_by_name(auth.uid(), 'Administrator') OR published = true);
+USING (public.has_role_by_name(auth.uid(), 'Administrator') OR status = 'published');
 
 -- community_comments
 DROP POLICY IF EXISTS "Admin can view all community comments" ON public.community_comments;
