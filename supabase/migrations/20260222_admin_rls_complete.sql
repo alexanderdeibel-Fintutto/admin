@@ -8,26 +8,55 @@
 -- 0. VERIFY ADMIN SETUP
 -- =====================
 
--- Ensure the admin role exists and is assigned
--- (Idempotent - won't fail if already exists)
+-- Ensure the admin role is assigned
+-- Uses dynamic SQL to handle schema differences between types and actual DB
 DO $$
+DECLARE
+  has_role_id boolean;
+  has_org_id boolean;
+  admin_has_role boolean;
 BEGIN
-  -- Check if the user_roles entry exists
-  IF NOT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = '49695d31-7673-4a3b-b5be-3aaaef120faf'
-  ) THEN
-    -- Try to find the Administrator role ID and insert without org_id
-    INSERT INTO public.user_roles (user_id, role_id, assigned_at)
-    SELECT
-      '49695d31-7673-4a3b-b5be-3aaaef120faf',
-      r.id,
-      now()
-    FROM public.roles r
-    WHERE r.name = 'Administrator'
-    LIMIT 1
-    ON CONFLICT DO NOTHING;
+  -- First check if admin already has the role via the working has_role_by_name function
+  SELECT public.has_role_by_name(
+    '49695d31-7673-4a3b-b5be-3aaaef120faf'::uuid,
+    'Administrator'
+  ) INTO admin_has_role;
+
+  -- If admin already has the role, skip the insert
+  IF COALESCE(admin_has_role, false) THEN
+    RAISE NOTICE 'Admin role already assigned, skipping insert';
+    RETURN;
   END IF;
+
+  -- Detect actual user_roles columns from information_schema
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_roles' AND column_name = 'role_id'
+  ) INTO has_role_id;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_roles' AND column_name = 'org_id'
+  ) INTO has_org_id;
+
+  -- Build and execute insert based on actual columns
+  IF has_role_id AND has_org_id THEN
+    INSERT INTO public.user_roles (user_id, org_id, role_id, assigned_at)
+    SELECT '49695d31-7673-4a3b-b5be-3aaaef120faf',
+           '00000000-0000-0000-0000-000000000001', r.id, now()
+    FROM public.roles r WHERE r.name = 'Administrator' LIMIT 1
+    ON CONFLICT DO NOTHING;
+  ELSIF has_role_id THEN
+    INSERT INTO public.user_roles (user_id, role_id, assigned_at)
+    SELECT '49695d31-7673-4a3b-b5be-3aaaef120faf', r.id, now()
+    FROM public.roles r WHERE r.name = 'Administrator' LIMIT 1
+    ON CONFLICT DO NOTHING;
+  ELSE
+    RAISE NOTICE 'user_roles table has unexpected schema - skipping direct insert. Use has_role_by_name to verify admin access.';
+  END IF;
+
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Admin role setup encountered an error: %. Continuing with RLS policies.', SQLERRM;
 END $$;
 
 
@@ -396,18 +425,20 @@ BEGIN
   SELECT email INTO user_email FROM auth.users WHERE id = uid;
   SELECT public.has_role_by_name(uid, 'Administrator') INTO is_admin;
 
-  SELECT r.name INTO role_name
-  FROM user_roles ur
-  JOIN roles r ON r.id = ur.role_id
-  WHERE ur.user_id = uid
-  LIMIT 1;
+  -- Derive role_name from has_role_by_name result instead of JOINing
+  -- (avoids dependency on user_roles column names which may differ from types)
+  IF COALESCE(is_admin, false) THEN
+    role_name := 'Administrator';
+  ELSE
+    role_name := 'none';
+  END IF;
 
   RETURN json_build_object(
     'authenticated', true,
     'user_id', uid,
     'email', user_email,
     'is_admin', COALESCE(is_admin, false),
-    'role_name', COALESCE(role_name, 'none'),
+    'role_name', role_name,
     'timestamp', now()
   );
 END;
