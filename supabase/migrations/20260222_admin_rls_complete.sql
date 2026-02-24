@@ -9,54 +9,70 @@
 -- =====================
 
 -- Ensure the admin role is assigned
--- Uses dynamic SQL to handle schema differences between types and actual DB
+-- The types.ts file is out of sync with the actual DB schema,
+-- so we use fully dynamic SQL to discover and use real column names.
 DO $$
 DECLARE
-  has_role_id boolean;
-  has_org_id boolean;
   admin_has_role boolean;
+  col_list text;
+  val_list text;
+  dyn_sql text;
 BEGIN
   -- First check if admin already has the role via the working has_role_by_name function
-  SELECT public.has_role_by_name(
-    '49695d31-7673-4a3b-b5be-3aaaef120faf'::uuid,
-    'Administrator'
-  ) INTO admin_has_role;
+  BEGIN
+    SELECT public.has_role_by_name(
+      '49695d31-7673-4a3b-b5be-3aaaef120faf'::uuid,
+      'Administrator'
+    ) INTO admin_has_role;
+  EXCEPTION WHEN OTHERS THEN
+    admin_has_role := NULL;
+  END;
 
-  -- If admin already has the role, skip the insert
+  -- If admin already has the role, skip
   IF COALESCE(admin_has_role, false) THEN
     RAISE NOTICE 'Admin role already assigned, skipping insert';
     RETURN;
   END IF;
 
-  -- Detect actual user_roles columns from information_schema
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'user_roles' AND column_name = 'role_id'
-  ) INTO has_role_id;
+  -- Discover actual columns and build dynamic INSERT
+  -- We map known semantic meanings to whatever columns actually exist
+  SELECT
+    string_agg(c.column_name, ', ' ORDER BY c.ordinal_position),
+    string_agg(
+      CASE c.column_name
+        WHEN 'user_id' THEN '''49695d31-7673-4a3b-b5be-3aaaef120faf''::uuid'
+        WHEN 'role_id' THEN '(SELECT id FROM public.roles WHERE name = ''Administrator'' LIMIT 1)'
+        WHEN 'org_id' THEN '''00000000-0000-0000-0000-000000000001''::uuid'
+        WHEN 'assigned_at' THEN 'now()'
+        WHEN 'created_at' THEN 'now()'
+        WHEN 'id' THEN 'gen_random_uuid()'
+        -- text/varchar role column: store role name directly
+        WHEN 'role' THEN '''Administrator'''
+        WHEN 'role_name' THEN '''Administrator'''
+        ELSE 'NULL'
+      END,
+      ', ' ORDER BY c.ordinal_position
+    )
+  INTO col_list, val_list
+  FROM information_schema.columns c
+  WHERE c.table_schema = 'public'
+    AND c.table_name = 'user_roles'
+    AND c.column_name != 'id'  -- skip PK, let DB generate it
+    AND c.is_generated = 'NEVER'
+    AND c.column_default IS NULL OR c.column_name IN ('user_id', 'role_id', 'org_id', 'role', 'role_name');
 
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'user_roles' AND column_name = 'org_id'
-  ) INTO has_org_id;
-
-  -- Build and execute insert based on actual columns
-  IF has_role_id AND has_org_id THEN
-    INSERT INTO public.user_roles (user_id, org_id, role_id, assigned_at)
-    SELECT '49695d31-7673-4a3b-b5be-3aaaef120faf',
-           '00000000-0000-0000-0000-000000000001', r.id, now()
-    FROM public.roles r WHERE r.name = 'Administrator' LIMIT 1
-    ON CONFLICT DO NOTHING;
-  ELSIF has_role_id THEN
-    INSERT INTO public.user_roles (user_id, role_id, assigned_at)
-    SELECT '49695d31-7673-4a3b-b5be-3aaaef120faf', r.id, now()
-    FROM public.roles r WHERE r.name = 'Administrator' LIMIT 1
-    ON CONFLICT DO NOTHING;
-  ELSE
-    RAISE NOTICE 'user_roles table has unexpected schema - skipping direct insert. Use has_role_by_name to verify admin access.';
+  IF col_list IS NULL THEN
+    RAISE NOTICE 'Could not detect user_roles columns - skipping insert';
+    RETURN;
   END IF;
 
+  dyn_sql := 'INSERT INTO public.user_roles (' || col_list || ') VALUES (' || val_list || ') ON CONFLICT DO NOTHING';
+  RAISE NOTICE 'Executing: %', dyn_sql;
+  EXECUTE dyn_sql;
+
 EXCEPTION WHEN OTHERS THEN
-  RAISE NOTICE 'Admin role setup encountered an error: %. Continuing with RLS policies.', SQLERRM;
+  RAISE NOTICE 'Admin role setup error: %. Continuing with RLS policies.', SQLERRM;
+END $$;
 END $$;
 
 
