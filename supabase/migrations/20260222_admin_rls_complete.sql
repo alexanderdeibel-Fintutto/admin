@@ -57,9 +57,9 @@ BEGIN
   FROM information_schema.columns c
   WHERE c.table_schema = 'public'
     AND c.table_name = 'user_roles'
-    AND c.column_name != 'id'  -- skip PK, let DB generate it
+    AND c.column_name != 'id'
     AND c.is_generated = 'NEVER'
-    AND c.column_default IS NULL OR c.column_name IN ('user_id', 'role_id', 'org_id', 'role', 'role_name');
+    AND (c.column_default IS NULL OR c.column_name IN ('user_id', 'role_id', 'org_id', 'role', 'role_name'));
 
   IF col_list IS NULL THEN
     RAISE NOTICE 'Could not detect user_roles columns - skipping insert';
@@ -72,7 +72,6 @@ BEGIN
 
 EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'Admin role setup error: %. Continuing with RLS policies.', SQLERRM;
-END $$;
 END $$;
 
 
