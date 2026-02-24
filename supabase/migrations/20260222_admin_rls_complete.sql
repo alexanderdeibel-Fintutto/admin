@@ -8,71 +8,19 @@
 -- 0. VERIFY ADMIN SETUP
 -- =====================
 
--- Ensure the admin role is assigned
--- The types.ts file is out of sync with the actual DB schema,
--- so we use fully dynamic SQL to discover and use real column names.
-DO $$
-DECLARE
-  admin_has_role boolean;
-  col_list text;
-  val_list text;
-  dyn_sql text;
-BEGIN
-  -- First check if admin already has the role via the working has_role_by_name function
-  BEGIN
-    SELECT public.has_role_by_name(
-      '49695d31-7673-4a3b-b5be-3aaaef120faf'::uuid,
-      'Administrator'
-    ) INTO admin_has_role;
-  EXCEPTION WHEN OTHERS THEN
-    admin_has_role := NULL;
-  END;
-
-  -- If admin already has the role, skip
-  IF COALESCE(admin_has_role, false) THEN
-    RAISE NOTICE 'Admin role already assigned, skipping insert';
-    RETURN;
-  END IF;
-
-  -- Discover actual columns and build dynamic INSERT
-  -- We map known semantic meanings to whatever columns actually exist
-  SELECT
-    string_agg(c.column_name, ', ' ORDER BY c.ordinal_position),
-    string_agg(
-      CASE c.column_name
-        WHEN 'user_id' THEN '''49695d31-7673-4a3b-b5be-3aaaef120faf''::uuid'
-        WHEN 'role_id' THEN '(SELECT id FROM public.roles WHERE name = ''Administrator'' LIMIT 1)'
-        WHEN 'org_id' THEN '''00000000-0000-0000-0000-000000000001''::uuid'
-        WHEN 'assigned_at' THEN 'now()'
-        WHEN 'created_at' THEN 'now()'
-        WHEN 'id' THEN 'gen_random_uuid()'
-        -- text/varchar role column: store role name directly
-        WHEN 'role' THEN '''Administrator'''
-        WHEN 'role_name' THEN '''Administrator'''
-        ELSE 'NULL'
-      END,
-      ', ' ORDER BY c.ordinal_position
-    )
-  INTO col_list, val_list
-  FROM information_schema.columns c
-  WHERE c.table_schema = 'public'
-    AND c.table_name = 'user_roles'
-    AND c.column_name != 'id'
-    AND c.is_generated = 'NEVER'
-    AND (c.column_default IS NULL OR c.column_name IN ('user_id', 'role_id', 'org_id', 'role', 'role_name'));
-
-  IF col_list IS NULL THEN
-    RAISE NOTICE 'Could not detect user_roles columns - skipping insert';
-    RETURN;
-  END IF;
-
-  dyn_sql := 'INSERT INTO public.user_roles (' || col_list || ') VALUES (' || val_list || ') ON CONFLICT DO NOTHING';
-  RAISE NOTICE 'Executing: %', dyn_sql;
-  EXECUTE dyn_sql;
-
-EXCEPTION WHEN OTHERS THEN
-  RAISE NOTICE 'Admin role setup error: %. Continuing with RLS policies.', SQLERRM;
-END $$;
+-- Ensure the admin role is assigned (idempotent)
+-- Actual user_roles schema: id (uuid auto), user_id (uuid), role (app_role enum, default 'mieter'),
+-- created_at (default now()), role_id (uuid nullable), assigned_at (default now())
+-- Only provide user_id + role_id; let id, created_at, assigned_at use defaults.
+-- Do NOT set the 'role' enum column - it's app_role type, not a text field.
+INSERT INTO public.user_roles (user_id, role_id)
+SELECT
+  '49695d31-7673-4a3b-b5be-3aaaef120faf',
+  r.id
+FROM public.roles r
+WHERE r.name = 'Administrator'
+LIMIT 1
+ON CONFLICT DO NOTHING;
 
 
 -- ==============================
